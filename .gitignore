@@ -1,0 +1,24 @@
+# Python 관련
+__pycache__/
+*.pyc
+
+# dotenv & secrets
+.env
+.env.*
+
+# 시스템/IDE
+.vscode/
+.DS_Store
+
+# k8s 로컬 캐시
+.k8s/
+.kube/
+
+# npm 쓰레기
+node_modules/
+.npm/
+package-lock.json
+
+# 기타
+logs/
+data/
