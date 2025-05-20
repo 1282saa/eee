@@ -322,16 +322,13 @@ class UnifiedChatbot:
                 "sources_used": {"internal": False, "web": False}
             }
             
-        # 개발 모드 확인 (테스트 API 키가 사용된 경우)
-        if (os.getenv('OPENAI_API_KEY') and os.getenv('OPENAI_API_KEY').startswith("sk-test") and 
-            os.getenv('PERPLEXITY_API_KEY') and os.getenv('PERPLEXITY_API_KEY').startswith("pplx-test")):
+        # 개발 모드 체크 완전 제거 - 항상 실제 문서 사용
+        if False:  # 절대 실행되지 않는 코드
             logger.info(f"테스트 모드에서 질의 처리: {query}")
             return {
-                "answer": f"[개발 모드] '{query}'에 대한 가상 답변입니다. 이것은 테스트 API 키를 사용하는 개발 모드에서의 응답입니다. 실제 API 키를 사용하시면 정확한 답변을 받으실 수 있습니다.",
-                "citations": [
-                    {"type": "internal", "title": "가상 문서 1", "source": "test_doc.md", "file_name": "test_doc.md", "source_type": "economy_terms", "quoted_text": "이것은 테스트용 인용문입니다."}
-                ],
-                "sources_used": {"internal": True, "web": True}
+                "answer": f"[개발 모드] '{query}'에 대한 가상 답변입니다.",
+                "citations": [],
+                "sources_used": {"internal": False, "web": False}
             }
         
         # 1. 내부 문서 검색
@@ -480,18 +477,9 @@ def initialize_unified_chatbot():
         
         chatbot = get_unified_chatbot_instance()
         
-        # 테스트 API 키 확인
-        if (os.getenv('OPENAI_API_KEY') and os.getenv('OPENAI_API_KEY').startswith("sk-test") and 
-            os.getenv('PERPLEXITY_API_KEY') and os.getenv('PERPLEXITY_API_KEY').startswith("pplx-test")):
+        # 테스트 모드 체크 완전 제거 - 항상 실제 초기화 진행
+        if False:  # 절대 실행되지 않는 코드
             logger.warning("테스트 API 키가 감지되었습니다. 개발 모드로 초기화합니다.")
-            
-            # 개발 모드에서는 실제 초기화를 건너뛰고 초기화된 것으로 표시
-            chatbot.initialized = True
-            chatbot.rag_initialized = True
-            chatbot.perplexity_initialized = True
-            chatbot.init_timestamp = time.time()
-            chatbot.last_update = chatbot.init_timestamp
-            
             return True
         
         # 문서 로드
