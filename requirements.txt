@@ -9,6 +9,7 @@ langchain-community>=0.3.0
 langchain-experimental>=0.3.0
 langchain-chroma>=0.2.0
 openai>=1.10.0
+google-generativeai>=0.3.2   # ★ 추가 ★
 chromadb
 tiktoken>=0.7.0
 markdown>=3.5.0
@@ -20,4 +21,4 @@ werkzeug>=2.3.0
 numpy
 pandas
 rank_bm25
-psycopg2-binary>=2.9.0  
+psycopg2-binary>=2.9.0
