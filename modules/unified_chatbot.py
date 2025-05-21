@@ -21,6 +21,9 @@ from langchain.retrievers import EnsembleRetriever
 from langchain.schema.document import Document
 from langchain.prompts import ChatPromptTemplate
 
+# Google AI import
+import google.generativeai as genai
+
 # 환경 변수 로드
 load_dotenv()
 
@@ -35,16 +38,27 @@ ECONOMY_TERMS_DIR = DATA_BASE_DIR / "economy_terms"
 RECENT_CONTENTS_DIR = DATA_BASE_DIR / "recent_contents_final"
 
 class UnifiedChatbot:
-    """GPT와 Perplexity API를 통합한 챗봇 시스템"""
+    """GPT, Gemini API 및 Perplexity API를 통합한 챗봇 시스템"""
     
     def __init__(self):
         self.embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
         self.llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)
         self.perplexity_api_key = os.getenv("PERPLEXITY_API_KEY")
+        self.gemini_api_key = os.getenv("GEMINI_API_KEY")
         self.docs = []
         self.vectorstore = None
         self.retriever = None
         self.file_paths = {}
+        
+        # Gemini API 설정
+        self.gemini_configured = False
+        if self.gemini_api_key:
+            try:
+                genai.configure(api_key=self.gemini_api_key)
+                self.gemini_configured = True
+                logger.info("Gemini API가 성공적으로 구성되었습니다.")
+            except Exception as e:
+                logger.error(f"Gemini API 구성 오류: {str(e)}")
         
         # 초기화 타임스탬프 추가
         self.init_timestamp = None
@@ -213,6 +227,29 @@ class UnifiedChatbot:
             self.perplexity_initialized = False
             return False
     
+    def check_gemini_api(self):
+        """Gemini API 연결 확인"""
+        if not self.gemini_api_key or not self.gemini_configured:
+            logger.warning("Gemini API 키가 없거나 구성되지 않았습니다")
+            return False
+            
+        try:
+            # API 연결 테스트
+            gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+            response = gemini_model.generate_content("테스트")
+            
+            # 응답 확인
+            if response and hasattr(response, 'text'):
+                logger.info("Gemini API 연결 확인: 성공")
+                return True
+            else:
+                logger.warning("Gemini API 응답 형식이 올바르지 않습니다")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Gemini API 연결 확인 실패: {str(e)}")
+            return False
+    
     def search_with_perplexity(self, query: str):
         """Perplexity API로 실시간 웹 검색"""
         if not self.perplexity_initialized:
@@ -297,6 +334,50 @@ class UnifiedChatbot:
                 "citations": []
             }
     
+    def search_with_gemini(self, query: str):
+        """Gemini API로 질의 처리"""
+        if not self.gemini_configured:
+            logger.warning("Gemini API가 구성되지 않았습니다")
+            return {
+                "success": False,
+                "answer": "Gemini API 검색 기능을 사용할 수 없습니다.",
+                "citations": []
+            }
+            
+        try:
+            # Gemini 모델 인스턴스 생성 (온라인 검색 지원 모델)
+            gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+            
+            # 시스템 프롬프트와 사용자 질의 결합
+            system_prompt = "당신은 최신 한국 경제 정보를 제공하는 전문가입니다. 정확한 정보와 함께 필요한 경우 출처를 제공하세요."
+            full_prompt = f"{system_prompt}\n\n사용자 질문: {query}"
+            
+            # Gemini API 호출
+            response = gemini_model.generate_content(full_prompt)
+            
+            # 응답 처리
+            if response and hasattr(response, 'text'):
+                return {
+                    "success": True,
+                    "answer": response.text,
+                    "citations": []  # Gemini는 별도 인용 형식이 없음
+                }
+            else:
+                logger.error("Gemini API 응답이 유효하지 않습니다")
+                return {
+                    "success": False,
+                    "answer": "응답 처리 중 오류가 발생했습니다.",
+                    "citations": []
+                }
+                
+        except Exception as e:
+            logger.error(f"Gemini 검색 오류: {str(e)}")
+            return {
+                "success": False,
+                "answer": f"Gemini 검색 중 오류 발생: {str(e)}",
+                "citations": []
+            }
+    
     def search_internal_documents(self, query: str):
         """내부 문서에서 관련 정보 검색"""
         if not self.rag_initialized:
@@ -313,8 +394,8 @@ class UnifiedChatbot:
             logger.error(f"내부 문서 검색 오류: {str(e)}")
             return []
     
-    def process_query(self, query: str) -> Dict[str, Any]:
-        """사용자 질의 처리 (RAG + Perplexity 통합)"""
+    def process_query(self, query: str, use_gemini: bool = False) -> Dict[str, Any]:
+        """사용자 질의 처리 (RAG + Gemini/Perplexity 통합)"""
         if not self.initialized:
             return {
                 "answer": "챗봇이 아직 초기화되지 않았습니다.",
@@ -334,13 +415,18 @@ class UnifiedChatbot:
         # 1. 내부 문서 검색
         internal_docs = self.search_internal_documents(query)
         
-        # 2. Perplexity로 웹 검색
-        web_search_result = self.search_with_perplexity(query)
+        # 2. API로 웹 검색 (Gemini 또는 Perplexity 사용)
+        web_search_result = {}
+        if use_gemini and self.gemini_configured:
+            web_search_result = self.search_with_gemini(query)
+        else:
+            web_search_result = self.search_with_perplexity(query)
         
         # 3. 결과 통합
         sources_used = {
             "internal": len(internal_docs) > 0,
-            "web": web_search_result.get("success", False)
+            "web": web_search_result.get("success", False),
+            "api": "gemini" if use_gemini and self.gemini_configured else "perplexity"
         }
         
         # 프롬프트 구성
@@ -446,6 +532,7 @@ class UnifiedChatbot:
             "initialized": self.initialized,
             "rag_initialized": self.rag_initialized,
             "perplexity_initialized": self.perplexity_initialized,
+            "gemini_configured": self.gemini_configured,
             "document_count": len(self.docs),
             "chunk_count": len(self.vectorstore.get()['ids']) if self.vectorstore else 0,
             "init_timestamp": self.init_timestamp,
@@ -453,7 +540,8 @@ class UnifiedChatbot:
             "uptime": uptime,
             "api_keys": {
                 "openai": bool(os.getenv("OPENAI_API_KEY")),
-                "perplexity": bool(os.getenv("PERPLEXITY_API_KEY"))
+                "perplexity": bool(os.getenv("PERPLEXITY_API_KEY")),
+                "gemini": bool(os.getenv("GEMINI_API_KEY"))
             }
         }
 
@@ -490,6 +578,9 @@ def initialize_unified_chatbot():
         
         # Perplexity API 확인
         chatbot.check_perplexity_api()
+        
+        # Gemini API 확인
+        chatbot.check_gemini_api()
         
         # 초기화 완료 및 타임스탬프 업데이트
         chatbot.initialized = True

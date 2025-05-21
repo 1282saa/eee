@@ -31,6 +31,9 @@ RUN mkdir -p /tmp/data/economy_terms /tmp/data/recent_contents_final /tmp/logs
 # 환경 변수 설정
 ENV ENVIRONMENT=cloud_run
 ENV PUPPETEER_ENABLED=FALSE
+ENV OPENAI_API_KEY=""
+ENV PERPLEXITY_API_KEY=""
+
 ENV PORT=8080
 
 # 애플리케이션 실행

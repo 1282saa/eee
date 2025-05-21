@@ -699,82 +699,96 @@ function contains(selector, text) {
  * 1면 언박싱 비디오 배너 설정
  */
 function setupVideoBanner() {
-  const videoBanner = document.getElementById('video-banner');
-  
+  const videoBanner = document.getElementById("video-banner");
+
   if (!videoBanner) return;
-  
-  videoBanner.addEventListener('click', handleUnboxingVideo);
+
+  videoBanner.addEventListener("click", handleUnboxingVideo);
 }
 
 async function handleUnboxingVideo() {
-    console.log('서울경제 1면 언박싱 버튼 클릭됨');
-    
-    // 로딩 모달 생성
-    createLoadingModal();
-    
-    try {
-        const response = await fetch('/api/get-unboxing-video', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        const data = await response.json();
-        
-        if (data.url) {
-            console.log('언박싱 비디오 URL:', data.url);
-            // 새 창에서 열기
-            window.open(data.url, '_blank');
-        } else {
-            alert('영상을 찾을 수 없습니다.');
-        }
-    } catch (error) {
-        console.error('오류 발생:', error);
-        alert('오류가 발생했습니다. 다시 시도해주세요.');
-    } finally {
-        // 로딩 모달 제거
-        removeLoadingModal();
+  console.log("서울경제 1면 언박싱 버튼 클릭됨");
+
+  // 로딩 모달 생성
+  createLoadingModal();
+  try {
+    const playlistUrl =
+      "https://tv.naver.com/sed.thumb?tab=playlist&playlistNo=972727";
+
+    // ⭐⭐⭐ 개선된 코드 시작 ⭐⭐⭐
+    // 이전 성공 코드에서 사용된 XPath를 그대로 사용합니다.
+    // 이 XPath가 '전체재생' 버튼 <a> 태그를 정확히 가리키는지 최종 확인이 필요합니다.
+    const targetXpath =
+      "/html/body/div[1]/div[3]/div[2]/div/div[3]/div/div[1]/ul/li[1]/a";
+
+    // 요청 본문에 URL과 XPath 정보를 포함합니다.
+    const requestBody = {
+      url: playlistUrl,
+      xpath: targetXpath, // XPath 정보 전송
+    };
+
+    const response = await fetch("/api/get-unboxing-video", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody), // URL과 XPath 정보 전송
+    });
+    // ⭐⭐⭐ 개선된 코드 끝 ⭐⭐⭐
+
+    const data = await response.json();
+
+    if (data.success && data.url) {
+      console.log("언박싱 비디오 URL:", data.url);
+      window.open(data.url, "_blank");
+    } else {
+      alert("영상을 찾을 수 없습니다: " + (data.error || "알 수 없는 오류"));
+      console.error("API 응답 오류:", data);
     }
+  } catch (error) {
+    console.error("오류 발생:", error);
+    alert("오류가 발생했습니다. 다시 시도해주세요.");
+  } finally {
+    removeLoadingModal();
+  }
 }
 
 function createLoadingModal() {
-    // 기존 모달이 있다면 제거
-    removeLoadingModal();
-    
-    // 모달 컨테이너 생성
-    const modalContainer = document.createElement('div');
-    modalContainer.id = 'loading-modal';
-    modalContainer.className = 'loading-modal';
-    
-    // 경제용 캐릭터 메시지들
-    const messages = [
-        '경제용이가 영상을 찾고 있어요! 🐳',
-        '잠깐만 기다려주세요~ 곧 영상이 열려요! 🎬',
-        '서울경제 1면의 비밀을 언박싱 중... 📦',
-        '경제용이가 열심히 준비 중이에요! 💪',
-        '곧 만나요! 조금만 기다려주세요~ ✨'
-    ];
-    
-    const randomMessage = messages[Math.floor(Math.random() * messages.length)];
-    
-    modalContainer.innerHTML = `
+  // 기존 모달이 있다면 제거
+  removeLoadingModal();
+
+  // 모달 컨테이너 생성
+  const modalContainer = document.createElement("div");
+  modalContainer.id = "loading-modal";
+  modalContainer.className = "loading-modal";
+
+  // 경제용 캐릭터 메시지들
+  const messages = [
+    "경제용이가 영상을 찾고 있어요! 🐳",
+    "잠깐만 기다려주세요~ 곧 영상이 열려요! 🎬",
+    "서울경제 1면의 비밀을 언박싱 중... 📦",
+    "경제용이가 열심히 준비 중이에요! 💪",
+    "곧 만나요! 조금만 기다려주세요~ ✨",
+  ];
+
+  const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+
+  modalContainer.innerHTML = `
         <div class="loading-content">
             <img src="/static/경제용.png" alt="경제용" class="loading-character">
             <div class="loading-message">${randomMessage}</div>
             <div class="loading-spinner"></div>
         </div>
     `;
-    
-    document.body.appendChild(modalContainer);
+
+  document.body.appendChild(modalContainer);
 }
 
 function removeLoadingModal() {
-    const modal = document.getElementById('loading-modal');
-    if (modal) {
-        modal.remove();
-    }
+  const modal = document.getElementById("loading-modal");
+  if (modal) {
+    modal.remove();
+  }
 }
 
 // 비디오 모달 관련 코드 제거됨 - 더 이상 필요없음
-

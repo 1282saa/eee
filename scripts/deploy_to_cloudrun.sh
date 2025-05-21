@@ -7,7 +7,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # GCP 프로젝트 정보 (실제 정보로 수정 필요)
-PROJECT_ID="your-project-id"
+PROJECT_ID="igneous-primacy-460407-m7"
 REGION="asia-northeast3"
 SERVICE_NAME="sedaily-chatbot"
 IMAGE_NAME="sedaily-chatbot"
